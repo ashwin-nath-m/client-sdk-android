@@ -22,7 +22,7 @@ buildscript {
     }
 }
 apply plugin: 'io.codearte.nexus-staging'
-
+apply plugin: 'maven-publish'
 subprojects {
     // Ignore examples folder, it's not a module itself.
     if (project.name == "examples") {
@@ -94,6 +94,20 @@ nexusStaging {
 
 afterEvaluate {
     // These aren't supported for snapshots. From nexus staging plugin.
+    publishing {
+        publications {
+            release(MavenPublication) {
+                // Ensure this matches your module component name
+                afterEvaluate {
+                    from components.findByName("default") ?: components.findByName("release")
+                }
+
+                groupId = "com.github.ashwin-nath-m"
+                artifactId = "livekit-android-sdk" // Ensure this matches your module name
+                version = VERSION_NAME
+            }
+        }
+    }
     if (VERSION_NAME.contains("SNAPSHOT")) {
         ["closeAndReleaseRepository",
          "closeRepository",

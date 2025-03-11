@@ -83,52 +83,77 @@ internal object EncodingUtils {
         }
     }
 
+//    fun videoLayersFromEncodings(
+//        trackWidth: Int,
+//        trackHeight: Int,
+//        encodings: List<RtpParameters.Encoding>,
+//        isSVC: Boolean,
+//    ): List<LivekitModels.VideoLayer> {
+//        return if (encodings.isEmpty()) {
+//            listOf(
+//                LivekitModels.VideoLayer.newBuilder().apply {
+//                    width = trackWidth
+//                    height = trackHeight
+//                    quality = LivekitModels.VideoQuality.HIGH
+//                    bitrate = 0
+//                    ssrc = 0
+//                }.build(),
+//            )
+//        } else if (isSVC) {
+//            val encodingSM = encodings.first().scalabilityMode!!
+//            val scalabilityMode = ScalabilityMode.parseFromString(encodingSM)
+//            val maxBitrate = encodings.first().maxBitrateBps ?: 0
+//            (0 until scalabilityMode.spatial).map { index ->
+//                LivekitModels.VideoLayer.newBuilder().apply {
+//                    width = ceil(trackWidth / (2f.pow(index))).roundToInt()
+//                    height = ceil(trackHeight / (2f.pow(index))).roundToInt()
+//                    quality = LivekitModels.VideoQuality.forNumber(LivekitModels.VideoQuality.HIGH.number - index)
+//                    bitrate = ceil(maxBitrate / 3f.pow(index)).roundToInt()
+//                    ssrc = 0
+//                }.build()
+//            }
+//        } else {
+//            encodings.map { encoding ->
+//                val scaleDownBy = encoding.scaleResolutionDownBy ?: 1.0
+//                var videoQuality = videoQualityForRid(encoding.rid ?: "")
+//                if (videoQuality == LivekitModels.VideoQuality.UNRECOGNIZED && encodings.size == 1) {
+//                    videoQuality = LivekitModels.VideoQuality.HIGH
+//                }
+//                LivekitModels.VideoLayer.newBuilder().apply {
+//                    // Internally, WebRTC casts directly to int without rounding.
+//                    // https://github.com/webrtc-sdk/webrtc/blob/8c7139f8e6fa19ddf2c91510c177a19746e1ded3/media/engine/webrtc_video_engine.cc#L3676
+//                    width = (trackWidth / scaleDownBy).toInt()
+//                    height = (trackHeight / scaleDownBy).toInt()
+//                    quality = videoQuality
+//                    bitrate = encoding.maxBitrateBps ?: 0
+//                    ssrc = 0
+//                }.build()
+//            }
+//        }
+//    }
+
     fun videoLayersFromEncodings(
         trackWidth: Int,
         trackHeight: Int,
         encodings: List<RtpParameters.Encoding>,
         isSVC: Boolean,
     ): List<LivekitModels.VideoLayer> {
-        return if (encodings.isEmpty()) {
-            listOf(
-                LivekitModels.VideoLayer.newBuilder().apply {
-                    width = trackWidth
-                    height = trackHeight
-                    quality = LivekitModels.VideoQuality.HIGH
-                    bitrate = 0
-                    ssrc = 0
-                }.build(),
-            )
-        } else if (isSVC) {
-            val encodingSM = encodings.first().scalabilityMode!!
-            val scalabilityMode = ScalabilityMode.parseFromString(encodingSM)
-            val maxBitrate = encodings.first().maxBitrateBps ?: 0
-            (0 until scalabilityMode.spatial).map { index ->
-                LivekitModels.VideoLayer.newBuilder().apply {
-                    width = ceil(trackWidth / (2f.pow(index))).roundToInt()
-                    height = ceil(trackHeight / (2f.pow(index))).roundToInt()
-                    quality = LivekitModels.VideoQuality.forNumber(LivekitModels.VideoQuality.HIGH.number - index)
-                    bitrate = ceil(maxBitrate / 3f.pow(index)).roundToInt()
-                    ssrc = 0
-                }.build()
-            }
-        } else {
-            encodings.map { encoding ->
-                val scaleDownBy = encoding.scaleResolutionDownBy ?: 1.0
-                var videoQuality = videoQualityForRid(encoding.rid ?: "")
-                if (videoQuality == LivekitModels.VideoQuality.UNRECOGNIZED && encodings.size == 1) {
-                    videoQuality = LivekitModels.VideoQuality.HIGH
-                }
-                LivekitModels.VideoLayer.newBuilder().apply {
-                    // Internally, WebRTC casts directly to int without rounding.
-                    // https://github.com/webrtc-sdk/webrtc/blob/8c7139f8e6fa19ddf2c91510c177a19746e1ded3/media/engine/webrtc_video_engine.cc#L3676
-                    width = (trackWidth / scaleDownBy).toInt()
-                    height = (trackHeight / scaleDownBy).toInt()
-                    quality = videoQuality
-                    bitrate = encoding.maxBitrateBps ?: 0
-                    ssrc = 0
-                }.build()
-            }
+        val predefinedResolutions = listOf(
+            Pair(1920, 1080), // 1080p
+            Pair(1280, 720),  // 720p
+            Pair(960, 540)    // 540p
+        )
+
+        val maxBitrate = encodings.firstOrNull()?.maxBitrateBps ?: 2500000 // Default max bitrate for 1080p
+
+        return predefinedResolutions.mapIndexed { index, (width, height) ->
+            LivekitModels.VideoLayer.newBuilder().apply {
+                this.width = width
+                this.height = height
+                this.quality = LivekitModels.VideoQuality.forNumber(LivekitModels.VideoQuality.HIGH.number - index)
+                this.bitrate = (maxBitrate / (2.0.pow(index))).toInt()
+                this.ssrc = 0
+            }.build()
         }
     }
 

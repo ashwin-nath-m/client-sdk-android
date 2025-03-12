@@ -4,6 +4,7 @@ buildscript {
     apply from: 'deps.gradle'
     repositories {
         google()
+        maven { url "https://jitpack.io" }
         gradlePluginPortal()
         mavenCentral()
     }
